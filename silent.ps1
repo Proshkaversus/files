@@ -1,3 +1,4 @@
+Set-ExecutionPolicy Bypass -Scope Process -Force
 # Запуск от имени администратора проверяется автоматически
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Warning "Необходимо запустить скрипт от имени администратора."
@@ -40,3 +41,4 @@ try {
 }
 
 Write-Host "`nГотово." -ForegroundColor Cyan
+
