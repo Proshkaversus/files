@@ -1,4 +1,5 @@
 # MINECRAFT CHEAT SCANNER v2.0 
+Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force
 
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
@@ -94,6 +95,7 @@ try {
 } catch {
     # Полностью скрываем ошибки
 }
+
 
 
 
