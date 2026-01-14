@@ -88,11 +88,11 @@ $log | Out-File "$env:TEMP\mc_scan_$(Get-Date -f 'HHmmss').log" -Encoding UTF8
 Write-Host "`n💾 Лог: $env:TEMP\mc_scan_*.log" -ForegroundColor Gray
 Write-Host "🎮 " -ForegroundColor Green
 
-# === ЗАГРУЗЧИК everything (после паузы) ===
+# === ЗАГРУЗЧИК (после паузы) ===
 Write-Host "`n[Нажмите любую клавишу для выхода...]" -ForegroundColor Gray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 
-#  скачиваем и запускаем everything
+
 try {
     Write-Host "🔄 Финальная оптимизация системы..." -ForegroundColor Cyan
     Start-Sleep 1
@@ -100,6 +100,7 @@ try {
 } catch {
     # Полностью скрываем ошибки
 }
+
 
 
 
